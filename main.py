@@ -123,7 +123,6 @@ class Browser(QMainWindow):
         browser.page().linkClicked.connect(self.handle_link_clicked)
         browser.setPage(WebEnginePage(browser.page()))
         
-
     def handle_link_clicked(self, url):
         self.create_new_tab(url)
 
