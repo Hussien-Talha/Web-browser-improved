@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import (
     QWidget, QFileDialog, QTabWidget, QMenu, QLabel, QHBoxLayout, QInputDialog, 
     QMessageBox, QDialog, QDialogButtonBox, QFormLayout, QLineEdit as QLE, QVBoxLayout as QVL, QHBoxLayout as QHL, QPushButton
 )
-from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage
+from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage, QWebEngineProfile
 from PyQt5.QtCore import QUrl, Qt, QTimer, pyqtSignal, QEventLoop, QThread
 from PyQt5.QtGui import QIcon, QPixmap, QMovie
 
@@ -120,11 +120,8 @@ class Browser(QMainWindow):
         browser.urlChanged.connect(lambda qurl, browser=browser: self.update_url(qurl, browser))
         browser.loadFinished.connect(self.update_title)
         browser.loadStarted.connect(self.loading_animation)
-        browser.page().linkClicked.connect(self.handle_link_clicked)
-        browser.setPage(WebEnginePage(browser.page()))
-        
-    def handle_link_clicked(self, url):
-        self.create_new_tab(url)
+        browser.setPage(WebEnginePage(browser.page(), self))
+        self.update_url(qurl, browser)
 
     def add_new_tab(self):
         self.create_new_tab()
@@ -260,13 +257,22 @@ class Browser(QMainWindow):
             self.create_new_tab()
 
 class WebEnginePage(QWebEnginePage):
-    linkClicked = pyqtSignal(QUrl)
+    def __init__(self, parent, browser):
+        super().__init__(parent)
+        self.browser = browser
 
     def acceptNavigationRequest(self, url, _type, isMainFrame):
         if _type == QWebEnginePage.NavigationTypeLinkClicked:
-            self.linkClicked.emit(url)
+            self.browser.create_new_tab(url)
             return False
         return super().acceptNavigationRequest(url, _type, isMainFrame)
+
+    def contextMenuEvent(self, event):
+        menu = QMenu(self)
+        open_link_action = QAction("Open link in new tab", self)
+        open_link_action.triggered.connect(lambda: self.browser.create_new_tab(self.contextMenuData().linkUrl()))
+        menu.addAction(open_link_action)
+        menu.exec_(event.globalPos())
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
